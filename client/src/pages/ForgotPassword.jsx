@@ -1,27 +1,21 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { toast } from "react-toastify";
 import API from "../api/axios";
 
 function ForgotPassword() {
   const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
 
     try {
-      setLoading(true);
-
-      const res = await API.post("/auth/forgot-password", {
-        email,
-      });
-
-      setMessage(res.data.message);
+      const res = await API.post("/auth/forgot-password", { email });
+      toast.success(res.data.message || "Reset link sent successfully!");
     } catch (error) {
-      setMessage(
-        error.response?.data?.message || "Something went wrong"
-      );
+      toast.error(error.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -30,17 +24,14 @@ function ForgotPassword() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-100 to-emerald-200 px-4">
       <div className="bg-white w-full max-w-md p-8 rounded-xl shadow-xl">
-
         <h1 className="text-3xl font-bold text-center text-green-700 mb-2">
           Forgot Password
         </h1>
-
         <p className="text-center text-gray-600 mb-6">
           Enter your registered email to receive a password reset link.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-
           <input
             type="email"
             placeholder="Enter your email"
@@ -49,32 +40,20 @@ function ForgotPassword() {
             onChange={(e) => setEmail(e.target.value)}
             required
           />
-
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg"
+            className="w-full bg-green-600 hover:bg-green-700 text-white p-3 rounded-lg transition"
           >
             {loading ? "Sending..." : "Send Reset Link"}
           </button>
-
         </form>
 
-        {message && (
-          <p className="text-center mt-5 text-green-600">
-            {message}
-          </p>
-        )}
-
         <div className="text-center mt-6">
-          <Link
-            to="/login"
-            className="text-green-600 hover:underline"
-          >
+          <Link to="/login" className="text-green-600 hover:underline">
             ← Back to Login
           </Link>
         </div>
-
       </div>
     </div>
   );

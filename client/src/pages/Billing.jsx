@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { toast } from "react-toastify"; // Added import
 import API from "../api/axios";
 
 const STANDARD_MILK_RATES = {
@@ -8,12 +9,11 @@ const STANDARD_MILK_RATES = {
 };
 
 function Billing() {
-  // --- ORIGINAL STATE & LOGIC PRESERVED ---
   const [customers, setCustomers] = useState([]);
   const [bills, setBills] = useState([]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [tableSearchQuery, setTableSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All"); 
+  const [statusFilter, setStatusFilter] = useState("All");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
   const [form, setForm] = useState({
@@ -23,13 +23,12 @@ function Billing() {
     pricePerLitre: "",
   });
 
-  // --- ALL ORIGINAL FUNCTIONS PRESERVED ---
   const getCustomers = async () => {
     try {
       const res = await API.get("/customers");
       setCustomers(res.data);
     } catch (error) {
-      console.error("Error fetching customers:", error);
+      toast.error("Error fetching customers list.");
     }
   };
 
@@ -38,7 +37,7 @@ function Billing() {
       const res = await API.get("/billing");
       setBills(res.data);
     } catch (error) {
-      console.error("Error fetching bills:", error);
+      toast.error("Error fetching billing records.");
     }
   };
 
@@ -65,7 +64,9 @@ function Billing() {
       ...serverBill,
       customerId: selectedCustomer || { name: "Unknown Customer", phone: "N/A" }
     };
-    alert(res.data.message || "Bill Processed Successfully");
+    
+    toast.success(res.data.message || "Bill Processed Successfully");
+    
     setBills((prevBills) => {
       const exists = prevBills.some((b) => b._id === formattedBill._id);
       return exists ? prevBills.map((b) => (b._id === formattedBill._id ? formattedBill : b)) : [formattedBill, ...prevBills];
@@ -76,7 +77,8 @@ function Billing() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.customerId) return alert("Please select a valid customer from the search dropdown.");
+    if (!form.customerId) return toast.warn("Please select a valid customer from the search dropdown.");
+    
     const payload = { ...form, pricePerLitre: Number(form.pricePerLitre), allowUpdate: false };
     try {
       const res = await API.post("/billing", payload);
@@ -88,11 +90,11 @@ function Billing() {
             const retryRes = await API.post("/billing", { ...payload, allowUpdate: true });
             processServerBill(retryRes, form.customerId);
           } catch (retryError) {
-            alert(retryError.response?.data?.message || "Failed to update existing record.");
+            toast.error(retryError.response?.data?.message || "Failed to update existing record.");
           }
         }
       } else {
-        alert(error.response?.data?.message || "Something went wrong");
+        toast.error(error.response?.data?.message || "Something went wrong");
       }
     }
   };
@@ -103,9 +105,10 @@ function Billing() {
       setBills((prevBills) =>
         prevBills.map((b) => b._id === billId ? { ...b, paymentStatus: res.data.bill?.paymentStatus || newStatus } : b)
       );
+      toast.success("Status updated!");
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to change payment status.");
-      getBills(); 
+      toast.error(error.response?.data?.message || "Failed to change payment status.");
+      getBills();
     }
   };
 
@@ -113,10 +116,10 @@ function Billing() {
     if (!window.confirm("Are you sure you want to delete this bill record permanently?")) return;
     try {
       const res = await API.delete(`/billing/${billId}`);
-      alert(res.data.message || "Bill removed successfully.");
+      toast.info(res.data.message || "Bill removed successfully.");
       setBills((prevBills) => prevBills.filter((b) => b._id !== billId));
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to drop entry.");
+      toast.error(error.response?.data?.message || "Failed to drop entry.");
     }
   };
 
@@ -139,7 +142,6 @@ function Billing() {
     <div className="min-h-screen bg-gradient-to-br from-slate-100 to-emerald-50 p-4 md:p-8">
       <h1 className="text-3xl md:text-4xl font-bold text-emerald-800 mb-8">💰 Billing Dashboard</h1>
 
-      {/* Form Layout: Now Responsive (grid-cols-1 md:grid-cols-2 lg:grid-cols-5) */}
       <div className="bg-white rounded-3xl shadow-xl p-6 mb-10 border border-slate-100">
         <h2 className="text-2xl font-bold text-slate-700 mb-6">Generate New Bill</h2>
         <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5 items-end">
@@ -180,7 +182,6 @@ function Billing() {
         </form>
       </div>
 
-      {/* Table Section: Responsive Design */}
       <div className="bg-white rounded-3xl shadow-xl p-6 border border-slate-100">
         <div className="flex flex-col md:flex-row justify-between mb-6 gap-4">
           <h2 className="text-2xl font-bold text-slate-700">📋 Generated Bills</h2>
@@ -190,7 +191,6 @@ function Billing() {
           </div>
         </div>
 
-        {/* Desktop Table View */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-slate-800 text-white">
@@ -216,7 +216,6 @@ function Billing() {
           </table>
         </div>
 
-        {/* Mobile List View (Conditional Rendering) */}
         <div className="md:hidden space-y-4">
           {filteredBills.map(bill => (
             <div key={bill._id} className="p-4 rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
