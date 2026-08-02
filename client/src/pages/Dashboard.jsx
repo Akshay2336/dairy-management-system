@@ -149,7 +149,7 @@ function Dashboard() {
               ) : customers.length === 0 ? (
                 <tr><td colSpan="6" className="text-center py-8">No customers found.</td></tr>
               ) : (
-                customers.slice(0, 5).map((customer, index) => (
+                customers.map((customer, index) => (
                   <tr key={customer._id} className="hover:bg-slate-50">
                     <td className="px-3 py-3 md:px-5 text-slate-600">{index + 1}</td>
                     <td className="px-3 py-3 md:px-5 font-medium">{customer.name}</td>
