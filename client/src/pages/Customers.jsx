@@ -16,7 +16,7 @@ function Customers() {
 
   const getCustomers = async () => {
     try {
-      const res = await API.get("/customers");
+      const res = await API.get("/cuetomers");
       setCustomers(res.data);
     } catch (error) {
       toast.error("Error fetching customers.");
