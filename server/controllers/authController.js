@@ -116,30 +116,53 @@ const loginUser = async (req, res) => {
 
  const forgotPassword = async (req, res) => {
   try {
+    console.log("🔵 Forgot password request received");
+
     const { email } = req.body;
 
-    // Check if user exists
+    console.log("📧 Email received:", email);
+
+    if (!email) {
+      return res.status(400).json({
+        message: "Email is required",
+      });
+    }
+
+    // Find user
+    console.log("🔎 Searching user...");
+
     const user = await User.findOne({ email });
 
     if (!user) {
+      console.log("❌ User not found");
+
       return res.status(404).json({
         message: "User not found",
       });
     }
 
-    // Generate random token
+    console.log("✅ User found:", user.email);
+
+    // Generate token
     const resetToken = crypto.randomBytes(32).toString("hex");
 
-    // Save token in database
+    console.log("🔑 Reset token generated");
+
+    // Save token
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // 15 minutes
+    user.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
+
+    console.log("💾 Saving reset token...");
 
     await user.save();
 
-    // Reset link
+    console.log("✅ Reset token saved");
+
+    // Reset URL
     const resetUrl = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
 
-    // Email body
+    console.log("🔗 Reset URL:", resetUrl);
+
     const message = `
       <h2>Password Reset</h2>
       <p>You requested to reset your password.</p>
@@ -147,25 +170,33 @@ const loginUser = async (req, res) => {
       <p>This link expires in 15 minutes.</p>
     `;
 
+    console.log("📨 Sending email...");
+
     await sendEmail({
       email: user.email,
       subject: "Password Reset Request",
       message,
     });
 
+    console.log("✅ Email sent successfully");
+
     res.status(200).json({
       message: "Password reset link sent to your email",
     });
 
   } catch (error) {
+    console.error("❌ FORGOT PASSWORD ERROR:");
     console.error(error);
 
     res.status(500).json({
       message: "Server Error",
+      error: error.message,
     });
   }
 };
 
+
+//reset
 const resetPassword = async (req, res) => {
   try {
 
