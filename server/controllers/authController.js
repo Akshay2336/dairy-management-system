@@ -143,6 +143,18 @@ const loginUser = async (req, res) => {
 
     console.log("✅ User found:", user.email);
 
+    // Prevent multiple reset emails
+if (
+  user.resetPasswordToken &&
+  user.resetPasswordExpire &&
+  user.resetPasswordExpire > Date.now()
+) {
+  return res.status(429).json({
+    message:
+      "A password reset link has already been sent. Please check your email.",
+  });
+}
+
     // Generate token
     const resetToken = crypto.randomBytes(32).toString("hex");
 
