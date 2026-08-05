@@ -4,7 +4,7 @@ import axios from "axios";
 const API = axios.create({
 
 //baseURL:"http://localhost:5000/api"
-baseURL:"https://dairy-management-system-wlxo.onrender.com"
+baseURL:"https://dairy-management-system-wlxo.onrender.com/api"
 
 });
 
