@@ -8,13 +8,18 @@ const { GoogleGenAI } = require("@google/genai");
 const Customer = require("../models/Customer");
 const MilkEntry = require("../models/MilkEntry");
 
+
+// =====================================================
+// GEMINI
+// =====================================================
+
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
 
 // =====================================================
-// TEXT AI
+// TEXT AI / CHAT
 // =====================================================
 
 router.post("/chat", protect, async (req, res) => {
@@ -31,7 +36,11 @@ router.post("/chat", protect, async (req, res) => {
       });
     }
 
-    console.log("❓ Question:", question);
+    const userQuestion = question.trim();
+    const lowerQuestion = userQuestion.toLowerCase();
+
+    console.log("❓ Question:", userQuestion);
+
 
     // =====================================================
     // GET USER'S CUSTOMERS
@@ -42,6 +51,7 @@ router.post("/chat", protect, async (req, res) => {
     }).select("name phone milkType status");
 
     console.log("👥 Customers found:", customers.length);
+
 
     // =====================================================
     // GET USER'S MILK ENTRIES
@@ -55,8 +65,226 @@ router.post("/chat", protect, async (req, res) => {
 
     console.log("🥛 Milk entries found:", milkEntries.length);
 
+
     // =====================================================
-    // PREPARE DATABASE INFORMATION
+    // 1. WHO ARE MY CUSTOMERS?
+    // =====================================================
+
+    if (
+      lowerQuestion.includes("who are my customers") ||
+      lowerQuestion.includes("list my customers") ||
+      lowerQuestion.includes("show my customers") ||
+      lowerQuestion.includes("my customer list")
+    ) {
+      if (customers.length === 0) {
+        return res.json({
+          success: true,
+          answer: "You currently have no customers.",
+        });
+      }
+
+      const customerList = customers
+        .map(
+          (customer, index) =>
+            `${index + 1}. ${customer.name} (${customer.milkType})`
+        )
+        .join("\n");
+
+      return res.json({
+        success: true,
+        answer: `You currently have ${customers.length} customers:\n${customerList}`,
+      });
+    }
+
+
+    // =====================================================
+    // 2. HOW MANY CUSTOMERS?
+    // =====================================================
+
+    if (
+      lowerQuestion.includes("how many customers") ||
+      lowerQuestion.includes("number of customers") ||
+      lowerQuestion.includes("total customers") ||
+      lowerQuestion.includes("count of customers")
+    ) {
+      return res.json({
+        success: true,
+        answer: `You currently have ${customers.length} customers.`,
+      });
+    }
+
+
+    // =====================================================
+    // 3. CALCULATE TOTAL MILK FOR EACH CUSTOMER
+    // =====================================================
+
+    const customerMilkTotals = {};
+
+    customers.forEach((customer) => {
+      customerMilkTotals[customer._id.toString()] = {
+        name: customer.name,
+        milkType: customer.milkType,
+        totalMilk: 0,
+        entryCount: 0,
+      };
+    });
+
+
+    milkEntries.forEach((entry) => {
+      if (!entry.customerId) return;
+
+      const customerId = entry.customerId._id.toString();
+
+      if (customerMilkTotals[customerId]) {
+        customerMilkTotals[customerId].totalMilk += Number(
+          entry.totalMilk || 0
+        );
+
+        customerMilkTotals[customerId].entryCount += 1;
+      }
+    });
+
+
+    const milkTotals = Object.values(customerMilkTotals);
+
+
+    // =====================================================
+    // CUSTOMERS WHO ACTUALLY HAVE MILK ENTRIES
+    // =====================================================
+
+    const customersWithMilk = milkTotals.filter(
+      (customer) => customer.entryCount > 0
+    );
+
+
+    // =====================================================
+    // 4. WHO BUYS THE LEAST MILK?
+    // =====================================================
+
+    if (
+      lowerQuestion.includes("least milk") ||
+      lowerQuestion.includes("less milk") ||
+      lowerQuestion.includes("buys the least") ||
+      lowerQuestion.includes("buys less") ||
+      lowerQuestion.includes("lowest quantity") ||
+      lowerQuestion.includes("least quantity") ||
+      lowerQuestion.includes("less quantity") ||
+      lowerQuestion.includes("lowest milk")
+    ) {
+      if (customersWithMilk.length === 0) {
+        return res.json({
+          success: true,
+          answer: "There is no milk purchase data available.",
+        });
+      }
+
+      const customerWithLeastMilk = customersWithMilk.reduce(
+        (least, customer) => {
+          return customer.totalMilk < least.totalMilk
+            ? customer
+            : least;
+        }
+      );
+
+      return res.json({
+        success: true,
+        answer: `${customerWithLeastMilk.name} buys the least milk, with a total of ${customerWithLeastMilk.totalMilk} litres.`,
+      });
+    }
+
+
+    // =====================================================
+    // 5. WHO BUYS THE MOST MILK?
+    // =====================================================
+
+    if (
+      lowerQuestion.includes("most milk") ||
+      lowerQuestion.includes("buys the most") ||
+      lowerQuestion.includes("highest quantity") ||
+      lowerQuestion.includes("maximum milk") ||
+      lowerQuestion.includes("highest milk")
+    ) {
+      if (customersWithMilk.length === 0) {
+        return res.json({
+          success: true,
+          answer: "There is no milk purchase data available.",
+        });
+      }
+
+      const customerWithMostMilk = customersWithMilk.reduce(
+        (most, customer) => {
+          return customer.totalMilk > most.totalMilk
+            ? customer
+            : most;
+        }
+      );
+
+      return res.json({
+        success: true,
+        answer: `${customerWithMostMilk.name} buys the most milk, with a total of ${customerWithMostMilk.totalMilk} litres.`,
+      });
+    }
+
+
+    // =====================================================
+    // 6. CUSTOMER-SPECIFIC QUESTIONS
+    // =====================================================
+
+    const matchedCustomer = customers.find((customer) =>
+      lowerQuestion.includes(customer.name.toLowerCase())
+    );
+
+
+    if (matchedCustomer) {
+
+      const customerTotal = milkTotals.find(
+        (customer) =>
+          customer.name.toLowerCase() ===
+          matchedCustomer.name.toLowerCase()
+      );
+
+
+      // -----------------------------------------------
+      // CUSTOMER MILK QUESTION
+      // -----------------------------------------------
+
+      if (
+        lowerQuestion.includes("milk") ||
+        lowerQuestion.includes("quantity") ||
+        lowerQuestion.includes("litre") ||
+        lowerQuestion.includes("liter") ||
+        lowerQuestion.includes("buy") ||
+        lowerQuestion.includes("buys")
+      ) {
+        return res.json({
+          success: true,
+          answer: `${matchedCustomer.name} has purchased a total of ${
+            customerTotal?.totalMilk || 0
+          } litres of milk.`,
+        });
+      }
+
+
+      // -----------------------------------------------
+      // CUSTOMER NAME / EXISTENCE
+      // -----------------------------------------------
+
+      if (
+        lowerQuestion.includes("customer") ||
+        lowerQuestion.includes("name") ||
+        lowerQuestion.includes("exist") ||
+        lowerQuestion.includes("is")
+      ) {
+        return res.json({
+          success: true,
+          answer: `Yes, ${matchedCustomer.name} is one of your customers. They use ${matchedCustomer.milkType} milk.`,
+        });
+      }
+    }
+
+
+    // =====================================================
+    // 7. PREPARE DATA FOR GEMINI
     // =====================================================
 
     const customerData = customers.map((customer) => ({
@@ -66,6 +294,7 @@ router.post("/chat", protect, async (req, res) => {
       status: customer.status,
     }));
 
+
     const milkData = milkEntries.map((entry) => ({
       customerName: entry.customerId?.name,
       date: entry.date,
@@ -74,8 +303,12 @@ router.post("/chat", protect, async (req, res) => {
       totalMilk: entry.totalMilk,
     }));
 
+
+    console.log("🤖 Sending general question to Gemini...");
+
+
     // =====================================================
-    // SEND QUESTION + DATABASE DATA TO GEMINI
+    // 8. GEMINI FOR GENERAL AI QUESTIONS
     // =====================================================
 
     const response = await ai.models.generateContent({
@@ -83,19 +316,21 @@ router.post("/chat", protect, async (req, res) => {
 
       config: {
         systemInstruction: `
-You are a Dairy Management Assistant.
+You are a helpful Dairy Management Assistant.
 
-You have access to REAL data from the logged-in user's dairy management system.
+You have access to real data from the logged-in user's dairy management system.
 
 IMPORTANT RULES:
 
-1. Only use the database information provided below.
+1. Only use the information provided below.
 2. Never invent customers, milk quantities, dates, prices, bills, or payments.
-3. If the requested information is not present in the database, clearly say that it is not available.
+3. If the requested information is not available, clearly say so.
 4. Answer the user's question directly and simply.
-5. When calculating milk quantities, use the provided milk entries.
-6. Do not reveal database IDs.
-7. Do not mention that you are reading a JSON/database unless necessary.
+5. Do not reveal MongoDB IDs.
+6. Do not mention JSON, database queries, or internal implementation.
+7. Do not make up information.
+8. If the user asks a general dairy-related question, provide a helpful answer.
+9. If the user asks for customer or milk information, use only the provided data.
 
 CUSTOMERS:
 ${JSON.stringify(customerData, null, 2)}
@@ -105,20 +340,38 @@ ${JSON.stringify(milkData, null, 2)}
         `,
       },
 
-      contents: question,
+      contents: userQuestion,
     });
+
 
     console.log("🤖 Gemini answer:", response.text);
 
-    res.json({
+
+    return res.json({
       success: true,
       answer: response.text,
     });
 
+
   } catch (error) {
+
     console.error("❌ AI Error:", error);
 
-    res.status(500).json({
+
+    // =====================================================
+    // GEMINI QUOTA ERROR
+    // =====================================================
+
+    if (error.status === 429) {
+      return res.status(429).json({
+        success: false,
+        message:
+          "AI quota has been exceeded. Please try again later.",
+      });
+    }
+
+
+    return res.status(500).json({
       success: false,
       message: "AI request failed",
       error: error.message,
@@ -131,13 +384,15 @@ ${JSON.stringify(milkData, null, 2)}
 // VOICE AI
 // =====================================================
 
-// =====================================================
-// VOICE AI
-// =====================================================
-
 router.post("/voice", protect, async (req, res) => {
   try {
+
     const { audio, mimeType } = req.body;
+
+
+    // =====================================================
+    // VALIDATE AUDIO
+    // =====================================================
 
     if (!audio) {
       return res.status(400).json({
@@ -146,31 +401,36 @@ router.post("/voice", protect, async (req, res) => {
       });
     }
 
-    // Reject extremely small recordings
+
     if (audio.length < 1000) {
       return res.status(400).json({
         success: false,
-        message: "No clear voice was detected. Please speak your question.",
+        message:
+          "No clear voice was detected. Please speak your question.",
       });
     }
+
 
     console.log("🎤 Voice request received");
     console.log("👤 User:", req.user._id);
     console.log("Audio MIME type:", mimeType);
     console.log("Audio size:", audio.length);
 
+
     // =====================================================
-    // GET USER'S CUSTOMERS
+    // GET CUSTOMERS
     // =====================================================
 
     const customers = await Customer.find({
       userId: req.user._id,
     }).select("name phone milkType status");
 
+
     console.log("👥 Customers found:", customers.length);
 
+
     // =====================================================
-    // GET USER'S MILK ENTRIES
+    // GET MILK ENTRIES
     // =====================================================
 
     const milkEntries = await MilkEntry.find({
@@ -179,10 +439,12 @@ router.post("/voice", protect, async (req, res) => {
       .populate("customerId", "name milkType")
       .sort({ date: -1 });
 
+
     console.log("🥛 Milk entries found:", milkEntries.length);
 
+
     // =====================================================
-    // PREPARE DATABASE DATA
+    // PREPARE DATA
     // =====================================================
 
     const customerData = customers.map((customer) => ({
@@ -192,6 +454,7 @@ router.post("/voice", protect, async (req, res) => {
       status: customer.status,
     }));
 
+
     const milkData = milkEntries.map((entry) => ({
       customerName: entry.customerId?.name,
       date: entry.date,
@@ -200,44 +463,47 @@ router.post("/voice", protect, async (req, res) => {
       totalMilk: entry.totalMilk,
     }));
 
+
     console.log("🤖 Sending voice + MongoDB data to Gemini...");
 
+
     // =====================================================
-    // SEND AUDIO + DATABASE DATA TO GEMINI
+    // SEND AUDIO TO GEMINI
     // =====================================================
 
     const response = await ai.models.generateContent({
+
       model: "gemini-3.1-flash-lite",
 
       contents: [
+
         {
           text: `
 You are a Dairy Management Assistant.
 
-First, listen carefully to the audio and understand exactly what
-the user is asking.
+First, listen carefully to the audio and understand exactly
+what the user is asking.
 
-Then answer the user's question using ONLY the real dairy data
+Then answer the question using ONLY the real dairy data
 provided below.
 
 IMPORTANT RULES:
 
-1. Do not invent any information.
+1. Do not invent information.
 2. Do not guess if the audio is unclear.
-3. If you cannot clearly understand the user's question,
-   respond:
-   "I couldn't clearly understand your question. Please try again."
-4. If the requested customer does not exist, say that the customer
-   was not found.
-5. If the requested milk information is not available, clearly say
-   that the information is not available.
-6. Use the milk entries to calculate totals when necessary.
+3. If you cannot clearly understand the question, respond:
+
+"I couldn't clearly understand your question. Please try again."
+
+4. If the requested customer does not exist, say that the customer was not found.
+5. If requested milk information is not available, clearly say so.
+6. Use milk entries to calculate totals when necessary.
 7. Do not reveal MongoDB IDs.
 8. Do not mention JSON, database queries, or internal implementation.
 9. Answer directly and simply.
-10. Do not say "The user asked..." or "The audio says..."
-11. If the user asks about a customer's milk, use the customer's
-    actual milk entries below.
+10. Do not say "The user asked..."
+11. If the user asks about a customer's milk, use the actual milk entries.
+12. Do not invent customer information.
 
 CUSTOMERS:
 ${JSON.stringify(customerData, null, 2)}
@@ -247,28 +513,48 @@ ${JSON.stringify(milkData, null, 2)}
           `,
         },
 
+
         {
           inlineData: {
             mimeType: mimeType || "audio/webm",
             data: audio,
           },
         },
+
       ],
     });
+
 
     console.log("✅ Gemini responded");
 
     console.log("🤖 AI answer:", response.text);
 
-    res.json({
+
+    return res.json({
       success: true,
       answer: response.text,
     });
 
+
   } catch (error) {
+
     console.error("❌ Voice AI Error:", error);
 
-    res.status(500).json({
+
+    // =====================================================
+    // GEMINI QUOTA ERROR
+    // =====================================================
+
+    if (error.status === 429) {
+      return res.status(429).json({
+        success: false,
+        message:
+          "AI quota has been exceeded. Please try again later.",
+      });
+    }
+
+
+    return res.status(500).json({
       success: false,
       message: "Voice AI request failed",
       error: error.message,
@@ -276,11 +562,13 @@ ${JSON.stringify(milkData, null, 2)}
   }
 });
 
+
 // =====================================================
 // MILK SUMMARY
 // =====================================================
 
 router.post("/milk-summary", protect, async (req, res) => {
+
   try {
 
     const {
@@ -289,6 +577,11 @@ router.post("/milk-summary", protect, async (req, res) => {
       year,
     } = req.body;
 
+
+    // =====================================================
+    // VALIDATION
+    // =====================================================
+
     if (!customerName) {
       return res.status(400).json({
         success: false,
@@ -296,12 +589,19 @@ router.post("/milk-summary", protect, async (req, res) => {
       });
     }
 
+
+    // =====================================================
+    // MONTH / YEAR
+    // =====================================================
+
     const currentDate = new Date();
+
 
     const selectedMonth =
       month !== undefined
         ? Number(month)
         : currentDate.getMonth();
+
 
     const selectedYear =
       year !== undefined
@@ -309,11 +609,12 @@ router.post("/milk-summary", protect, async (req, res) => {
         : currentDate.getFullYear();
 
 
-    // ==========================================
+    // =====================================================
     // FIND CUSTOMER
-    // ==========================================
+    // =====================================================
 
     const customer = await Customer.findOne({
+
       userId: req.user._id,
 
       name: {
@@ -322,6 +623,7 @@ router.post("/milk-summary", protect, async (req, res) => {
           "i"
         ),
       },
+
     });
 
 
@@ -335,15 +637,16 @@ router.post("/milk-summary", protect, async (req, res) => {
     }
 
 
-    // ==========================================
+    // =====================================================
     // DATE RANGE
-    // ==========================================
+    // =====================================================
 
     const startDate = new Date(
       selectedYear,
       selectedMonth,
       1
     );
+
 
     const endDate = new Date(
       selectedYear,
@@ -356,9 +659,9 @@ router.post("/milk-summary", protect, async (req, res) => {
     console.log("📅 End:", endDate);
 
 
-    // ==========================================
+    // =====================================================
     // FIND MILK ENTRIES
-    // ==========================================
+    // =====================================================
 
     const milkEntries = await MilkEntry.find({
 
@@ -372,13 +675,15 @@ router.post("/milk-summary", protect, async (req, res) => {
       },
 
     }).sort({
+
       date: 1,
+
     });
 
 
-    // ==========================================
+    // =====================================================
     // CALCULATE TOTAL
-    // ==========================================
+    // =====================================================
 
     const totalMilk = milkEntries.reduce(
       (total, entry) => {
@@ -397,11 +702,11 @@ router.post("/milk-summary", protect, async (req, res) => {
     );
 
 
-    // ==========================================
+    // =====================================================
     // RESPONSE
-    // ==========================================
+    // =====================================================
 
-    res.json({
+    return res.json({
 
       success: true,
 
@@ -430,13 +735,19 @@ router.post("/milk-summary", protect, async (req, res) => {
       error
     );
 
-    res.status(500).json({
+
+    return res.status(500).json({
       success: false,
       message: "Could not calculate milk summary",
     });
 
   }
+
 });
 
+
+// =====================================================
+// EXPORT
+// =====================================================
 
 module.exports = router;
