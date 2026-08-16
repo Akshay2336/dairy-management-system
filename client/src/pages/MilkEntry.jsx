@@ -354,9 +354,9 @@ function MilkEntry() {
 
 
 
-          {(form.shift === "morning" || form.shift === "both") && <input type="number" name="morningMilk" value={form.morningMilk} onChange={handleChange} placeholder="Morning Liters" step="0.1" className="p-3 rounded-xl border border-slate-200" required={form.shift === "morning"} />}
+          {(form.shift === "morning" || form.shift === "both") && <input type="number" min="0" name="morningMilk" value={form.morningMilk} onChange={handleChange} placeholder="Morning Liters" step="0.1" className="p-3 rounded-xl border border-slate-200" required={form.shift === "morning"} />}
 
-          {(form.shift === "evening" || form.shift === "both") && <input type="number" name="eveningMilk" value={form.eveningMilk} onChange={handleChange} placeholder="Evening Liters" step="0.1" className="p-3 rounded-xl border border-slate-200" required={form.shift === "evening"} />}
+          {(form.shift === "evening" || form.shift === "both") && <input type="number"  min="0" name="eveningMilk" value={form.eveningMilk} onChange={handleChange} placeholder="Evening Liters" step="0.1" className="p-3 rounded-xl border border-slate-200" required={form.shift === "evening"} />}
 
          
 

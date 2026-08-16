@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { Sparkles } from "lucide-react";
 
 function Sidebar({ isOpen, setIsOpen }) {
   const closeSidebar = () => {
@@ -80,6 +81,18 @@ function Sidebar({ isOpen, setIsOpen }) {
           >
             💰 Billing
           </NavLink>
+
+
+<NavLink
+  to="/dairy-ai"
+  className={menuClass}
+  onClick={closeSidebar}
+>
+  <Sparkles size={20} />
+  <span>Dairy AI</span>
+</NavLink>
+
+
 
          
 

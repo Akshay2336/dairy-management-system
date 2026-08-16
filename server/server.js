@@ -1,5 +1,9 @@
 const express = require("express");
 const dotenv = require("dotenv");
+
+dotenv.config();
+
+const app = express();
 const cors = require("cors");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
@@ -8,12 +12,9 @@ const customerRoutes = require("./routes/customerRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const billingRoutes = require("./routes/billingRoutes");
 const settingsRoutes = require("./routes/settingsRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 
-dotenv.config();
 connectDB();
-
-const app = express();
-
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -25,7 +26,7 @@ app.use("/api/milk-entry", milkEntryRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/billing", billingRoutes);
 app.use("/api/settings", settingsRoutes);
-
+app.use("/api/ai", aiRoutes);
 // Home Route
 app.get("/", (req, res) => {
     res.send("Server is running successfully");

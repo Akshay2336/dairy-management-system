@@ -9,6 +9,8 @@ import MilkEntry from "../pages/MilkEntry";
 import Billing from "../pages/Billing";
 import ProtectedRoute from "../components/ProtectedRoute";
 import Layout from "../components/Layout";
+import DairyAI from "../pages/DairyAi";
+
 
 function AppRoutes() {
   return (
@@ -36,6 +38,7 @@ function AppRoutes() {
           <Route path="/customers" element={<Customers />} />
           <Route path="/milk-entry" element={<MilkEntry />} />
           <Route path="/billing" element={<Billing />} />
+           <Route path="/dairy-ai" element={<DairyAI />} />
            
         </Route>
       </Routes>

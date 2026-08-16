@@ -1,30 +1,22 @@
 import axios from "axios";
 
-
 const API = axios.create({
-
-//baseURL:"http://localhost:5000/api"
-baseURL:"https://dairy-management-system-wlxo.onrender.com/api"
-
+  baseURL: "https://dairy-management-system-wlxo.onrender.com/api",
 });
 
+API.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
 
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
-API.interceptors.request.use((config)=>{
-
-const token = localStorage.getItem("token");
-
-
-if(token){
-
-config.headers.Authorization = `Bearer ${token}`;
-
-}
-
-
-return config;
-
-});
-
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 export default API;
