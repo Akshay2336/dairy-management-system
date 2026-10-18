@@ -31,11 +31,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: client/package-lock.json
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run frontend lint
         run: npm run lint --if-present
@@ -61,11 +59,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-          cache-dependency-path: server/package-lock.json
 
       - name: Install backend dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run backend tests
         env:
