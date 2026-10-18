@@ -1,15 +1,19 @@
+
 name: Dairy Management System CI
 
 on:
   push:
     branches:
       - main
-      - develop
+      - dev
+      - test
       - "feature/**"
+
   pull_request:
     branches:
       - main
-      - develop
+      - dev
+      - test
 
 permissions:
   contents: read
@@ -31,9 +35,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
 
       - name: Install frontend dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run frontend lint
         run: npm run lint --if-present
@@ -59,15 +65,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
 
       - name: Install backend dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run backend tests
         env:
           PORT: 5000
           NODE_ENV: test
-          CLIENT_URL: ${{ secrets.CLIENT_URL || 'https://dairy-management-system-seven.vercel.app' }}
+          CLIENT_URL: ${{ secrets.CLIENT_URL || 'https://dairy-management-system-seven-wheat.vercel.app' }}
           EMAIL_FROM: ${{ secrets.EMAIL_FROM || 'onboarding@resend.dev' }}
           MONGO_URI: ${{ secrets.MONGO_URI }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
