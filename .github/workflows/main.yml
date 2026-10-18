@@ -1,0 +1,71 @@
+
+name: Dairy Management System CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - "feature/**"
+
+  pull_request:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run frontend lint
+        run: npm run lint --if-present
+
+      - name: Build frontend
+        run: npm run build
+
+  backend:
+    name: Backend CI
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+
+      - name: Run backend tests
+        run: npm test --if-present
