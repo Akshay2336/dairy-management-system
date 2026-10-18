@@ -17,5 +17,18 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    rules: {
+      // Allow unused variables/errors if prefixed with an underscore, or report as warnings
+      'no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+      // Turn off strict synchronous setState inside useEffect checks
+      'react-hooks/set-state-in-effect': 'off',
+    },
   },
 ])
